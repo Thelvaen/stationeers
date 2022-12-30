@@ -1,0 +1,85 @@
+#  --=<< MeteorSbor >>=--
+# Mine position and Battery
+define Distance 90  # Meters    90m
+define Direction 340  # Degrees  0-360°
+define MinBat 10000  # 10k/72k 
+define MinBatStart 71900 # 99.9%
+# Battery 36000 288000 2304000 Cell 12000 72000 
+alias BaseX r10         # Base
+alias BaseY r11
+alias BaseZ r12
+alias MineX r13         # Mine
+alias MineY r14
+alias MineZ r15
+alias Robot db          # Port Robot
+alias Status r9         # Return No/Yes
+l BaseX Robot PositionX # Setup Base
+l BaseY Robot PositionY
+l BaseZ Robot PositionZ
+div r0 Direction 180    # Mine Position
+mul r0 r0 3.1415
+cos r1 r0
+sin r0 r0
+sub r0 0 r0   #-MineZ
+mul r1 r1 Distance
+mul r0 r0 Distance
+add MineX r1 BaseX
+move MineY BaseY
+add MineZ r0 BaseZ
+move sp 0
+Start:              # ---------- Start ----------
+	yield
+	move r0 2               # Ore UnLoad Ok
+	move r1 0
+	ls r3 Robot r0 Occupied
+	add r1 r1 r3
+	add r0 r0 1
+	brlt r0 10 -3
+	brlt r1 0.9 3           # Emple
+	s Robot Mode 4          # UnLoad
+	j GoBase    # or Start ++++++++++++++++++++++++++
+	ls r0 Robot 0 Charge    # Battery
+	blt r0 MinBatStart GoBase
+GoMine:             # --- Go To Mine Position ---
+	move Status 0           # No Return
+	move r0 MineX
+	move r1 MineY
+	move r2 MineZ
+	jal GoTo                # GoTo(r0,r1,r2)
+Mine:               # ---------- Mine -----------
+    s Robot Mode 3          
+	yield
+	ls r0 Robot 0 Charge    # Battery low
+	blt r0 MinBat GoBase
+	l r0 Robot Mode         # Mine
+	breq r0 3 -3            # Mine End
+    beq r0 0 Mine       
+GoBase:             # -------- Go To Base -------
+	move Status 1           # Return
+	jr 4                    # Off New Setup Mine ========
+	l MineX Robot PositionX # Setup Mine
+	l MineY Robot PositionY
+	l MineZ Robot PositionZ
+	move r0 BaseX
+	move r1 BaseY
+	move r2 BaseZ
+	jal GoTo                # GoTo(r0,r1,r2)
+    j Start             # ====== END => UnLoad ======
+    s Robot Mode 2      # ----- Function Go To -----
+    yield
+GoTo:                  
+	s Robot TargetX r0      # Position
+	s Robot TargetY r1
+	s Robot TargetZ r2
+	brnez Status 3          # Battery Low
+	ls r5 Robot 0 Charge
+	blt r5 MinBat GoBase
+	l r3 Robot PositionX    # Stop
+	l r4 Robot PositionZ
+	sub r3 r3 r0
+	sub r4 r4 r2
+	mul r3 r3 r3
+	mul r4 r4 r4
+	add r3 r3 r4
+    brgt r3 1 -16           # sqrt 1 
+    j ra 
