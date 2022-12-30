@@ -1,0 +1,109 @@
+define Int.Pressure 95
+define Ext.Pressure 0
+
+alias Int.Door d0
+alias Int.Vent d1
+alias Ext.Door d2
+alias Ext.Vent d3
+alias Sensor d4
+alias AirLock d5
+
+define Color.Red 4
+define Color.Yellow 5
+define Color.Green 2
+define Mode.Out 1
+define Mode.In 0
+
+alias rT r0
+alias rT2 r1
+alias rTarPressure r2
+
+Init:
+    s Int.Vent On 0
+    s Ext.Vent On 0
+    s Ext.Door On 1
+    s Int.Door On 1
+    s Ext.Door Mode 1 #Logic mode
+    s Int.Door Mode 1 #Logic mode
+    l rT Int.Door Open
+    beq rT 1 _setIn
+    s db Setting Mode.Out
+    j _endInit
+_setIn:
+    s db Setting Mode.In
+_endInit:
+yield
+
+main:
+	jal _monitorTrigger
+    l rT db Setting
+    beqz rT _cycleToExt
+    j _cycleToInt
+j main
+
+_cycleToInt:
+    s db Setting Mode.In
+	s Ext.Door Lock 1
+	s Int.Door Lock 1
+	s Ext.Door Open 0
+	s Ext.Vent Mode Mode.Out
+	s Ext.Vent On 1
+	jal _dePressurize
+	s Ext.Vent On 0
+	s Int.Vent Mode Mode.In
+	s Int.Vent PressureExternal Int.Pressure
+	move rTarPressure Int.Pressure
+	s Int.Vent On 1
+	jal _pressurize
+	s Int.Vent On 0
+	s Int.Door Open 1
+	s Ext.Door Lock 0
+	s Int.Door Lock 0
+j main
+
+_cycleToExt:
+    s db Setting Mode.Out
+	s Int.Door Lock 1
+	s Ext.Door Lock 1
+	s Int.Door Open 0
+	s Int.Vent Mode Mode.Out
+	s Int.Vent On 1
+	jal _dePressurize
+	s Int.Vent On 0
+	s Ext.Vent Mode Mode.In
+	s Ext.Vent PressureExternal Ext.Pressure
+	move rTarPressure Ext.Pressure
+	s Ext.Vent On 1
+	jal _pressurize
+	s Ext.Vent On 0
+	s Ext.Door Open 1
+	s Int.Door Lock 0
+	s Ext.Door Lock 0
+j main
+
+_dePressurize:
+		l rT Sensor Pressure
+		beqz rT dePressurize_end
+	j _dePressurize
+dePressurize_end:
+j ra
+
+_pressurize:
+		l rT Sensor Pressure
+		bge rT rTarPressure pressurize_end
+		#beqz rT pressurize_end
+	j _pressurize
+pressurize_end:
+j ra
+
+_monitorTrigger:
+		l rT Int.Door Setting
+		l rT2 Ext.Door Setting
+		beq rT rT2 monitorTrigger_end
+        l rT AirLock Setting
+        l rT2 db Setting
+        beq rT rT2 monitorTrigger_end
+		yield
+	j _monitorTrigger
+monitorTrigger_end:
+j ra
