@@ -91,7 +91,7 @@ j ra
 _pressurize:
 		l rT Sensor Pressure
 		bge rT rTarPressure pressurize_end
-		#beqz rT pressurize_end
+		#beqz rT pressurize_end # for simulation purpose
 	j _pressurize
 pressurize_end:
 j ra
